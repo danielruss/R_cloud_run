@@ -14,4 +14,4 @@ ADD . /app
 WORKDIR /app
 
 # Run the API when the container launches
-CMD R -e "source('plumber.R')"
+CMD R -e "plumber::plumb('plumber.R')$run(port=as.numeric(Sys.getenv('PORT')))"
