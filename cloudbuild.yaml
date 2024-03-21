@@ -1,7 +1,7 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build','-t','us-east1-docker.pkg.dev/nih-nci-dceg-druss/test1/rcloudruntest','.']
+  args: ['build','-t','us-east1-docker.pkg.dev/nih-nci-dceg-druss/crtest','.']
 
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['run', 'deploy', 'my-service', '--image', 'us-east1-docker.pkg.dev/nih-nci-dceg-druss/test1/rcloudruntest','--region', 'us-east1', '--platform', 'managed','--allow-unauthenticated']
+  args: ['run', 'deploy', 'crtest', '--image', 'us-east1-docker.pkg.dev/nih-nci-dceg-druss/crtest','--region', 'us-east1', '--platform', 'managed','--allow-unauthenticated']
 
