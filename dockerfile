@@ -1,5 +1,5 @@
 # Use the rocker/r-base image as the base image
-FROM rocker/r-base
+FROM rocker/tidyverse
 
 # Install the necessary R packages
 RUN install2.r plumber
