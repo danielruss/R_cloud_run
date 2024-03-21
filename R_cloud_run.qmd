@@ -1,0 +1,21 @@
+---
+title: "R_cloud_run"
+---
+
+# Packaging A plumber api for cloud run.
+
+I am using the default plumber.R created by Rstudio when you select File \> New File \> Plumber API...
+
+It creates 3 endpoints:
+
+1.  GET /echo
+2.  GET /plot
+3.  POST /sum
+
+The plan is to use Cloud Build to listen to a github repository. When the repository is updated, cloud build pulls the changes, creates a new docker container, and redeploys API to cloud run.
+
+## check the API into github
+This test will be checked into the danielruss/R_cloud_run repository.
+
+## create the cloud build trigger.
+

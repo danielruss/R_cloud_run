@@ -1,0 +1,7 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+/.quarto/
+R_cloud_run_files
+_quarto.yml
