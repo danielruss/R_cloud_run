@@ -14,4 +14,5 @@ ADD . /app
 WORKDIR /app
 
 # Run the API when the container launches
-CMD R -e "plumber::plumb('SimpleTestApi/plumber.R')$run(port=as.numeric(Sys.getenv('PORT')))"
+CMD R -e "pr<-plumber::plumb('SimpleTestApi/plumber.R');pr$run(port=as.numeric(Sys.getenv('PORT'))"
+
