@@ -13,6 +13,7 @@ ADD . /app
 # Set the working directory to /app
 WORKDIR /app
 
+
 # Run the API when the container launches
 CMD R -e "pr<-plumber::plumb('SimpleTestApi/plumber.R');pr$run(port=as.numeric(Sys.getenv('PORT'))"
 
