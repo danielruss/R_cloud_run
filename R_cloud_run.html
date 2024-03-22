@@ -70,12 +70,69 @@ ul.task-list li input[type="checkbox"] {
 <li>POST /sum</li>
 </ol>
 <p>The plan is to use Cloud Build to listen to a github repository. When the repository is updated, cloud build pulls the changes, creates a new docker container, and redeploys API to cloud run.</p>
-<section id="check-the-api-into-github" class="level2">
-<h2 class="anchored" data-anchor-id="check-the-api-into-github">check the API into github</h2>
-<p>This test will be checked into the danielruss/R_cloud_run repository.</p>
+<section id="build-the-dockerfile" class="level2">
+<h2 class="anchored" data-anchor-id="build-the-dockerfile">build the dockerfile</h2>
+<p>Here is the basic dockerfile for running a plumber api on cloud run:</p>
+<pre><code>FROM rocker/tidyverse
+RUN install2.r plumber
+EXPOSE ${PORT}
+ADD . /app
+WORKDIR /app
+CMD R -e "pr\&lt;-plumber::plumb('SimpleTestApi/plumber.R');pr\$run(host='0.0.0.0',port=as.numeric(Sys.getenv('PORT')))"</code></pre>
+<p>The FROM command commands set the base container. I use the tidyverse base because installing the tidyverse is really slow. It may be worthwhile to have a plumber base. However, I think in the artifact registry, it saves the base+plumber container anyway.</p>
+<p>The rocker/tidyverse base image has code ‘install2.r’ that handles installing packages. The prefered way to install R packages is to run this code. The RUN command is only run at build time. To install multiple packages:</p>
+<pre><code>RUN install2.r pkg1 pgk2 pkg3</code></pre>
+<p>The ADD . /app command copies all the files in the current directory into the /app directory of the image. The next line WORKDIR /app sets the default directory at runtime.</p>
+<p>The CMD line is called when the docker image is run. Notice that the “$” is escaped. This is required.</p>
+</section>
+<section id="build-the-docker-image-and-push-it-to-artifact-registry." class="level2">
+<h2 class="anchored" data-anchor-id="build-the-docker-image-and-push-it-to-artifact-registry.">build the docker image and push it to artifact registry.</h2>
+<p>We use the docker build command to build a docker image:</p>
+<pre><code>docker build -t us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/myapi:latest .</code></pre>
+<p>The <em>us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo</em> is my repo in artifact registry. Google requires the tag to look like: <strong>LOCATION</strong>-docker.pkg.dev/<strong>PROJECT</strong>/<strong>REPOSITORY</strong>/<strong>NAME</strong></p>
+<p>If we wanted to push to the artifact registry, (but you should not because cloud build will do this)</p>
+<p>If you want to run the image after you build it:</p>
+<pre><code>docker run --env PORT=8080 -p 8080:8080  -it us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/myapi:latest</code></pre>
+<p>of course change the tag from <code>us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/myapi:latest</code> to your tag</p>
+</section>
+<section id="deploy-the-image-to-cloud-run." class="level2">
+<h2 class="anchored" data-anchor-id="deploy-the-image-to-cloud-run.">deploy the image to cloud run.</h2>
+<p>using gcloud:</p>
+<pre><code>gcloud run deploy myapitiest --image us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/myapi --region=us-east1 --allow-unauthenticated</code></pre>
+<p>Here we are telling cloud run to deploy the “mytestapi” application using the image with a particular tag in the us-east1 region. I allow unauthenticated call so that I can test the api without credentials. If you api is not public, not add this, but you will need to pass an authentication token.</p>
+</section>
+<section id="build-the-cloudbuild.yaml-file" class="level2">
+<h2 class="anchored" data-anchor-id="build-the-cloudbuild.yaml-file">build the cloudbuild.yaml file</h2>
+<p>Cloud build automatically runs 3 steps in the cloud.</p>
+<ol type="1">
+<li>build the docker image…</li>
+<li>push it to the artifact registry</li>
+<li>deploy the artifact to cloud run</li>
+</ol>
+<p>The cloudbuild.yaml specifies the steps needed:</p>
+<pre><code>steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build','-t','us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/apitest','.']
+
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push','us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/apitest']
+
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['run', 'deploy', 'apitest', '--image', 'us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/apitest','--region', 'us-east1', '--platform', 'managed','--allow-unauthenticated']</code></pre>
+<p>This is pretty much all you need for the simplest case. Again make sure you change the tags (and possible the regions if you don’t like us-east1)</p>
+<p>Each step is was describe before. The first step is the <code>docker build</code>. The second step is the <code>docker push</code>. And the last step is the <code>gcloud run deploy</code></p>
 </section>
 <section id="create-the-cloud-build-trigger." class="level2">
 <h2 class="anchored" data-anchor-id="create-the-cloud-build-trigger.">create the cloud build trigger.</h2>
+<p>ok, I did this in the console, but the command should look like:</p>
+<blockquote class="blockquote">
+<p><em>gcloud builds triggers create cloud-source-repositories #–repo=danielruss/R_cloud_run</em></p>
+</blockquote>
+<p>I will have to fix this…</p>
+</section>
+<section id="check-the-api-into-github" class="level2">
+<h2 class="anchored" data-anchor-id="check-the-api-into-github">check the API into github</h2>
+<p>This test will be checked into the danielruss/R_cloud_run repository.</p>
 </section>
 </section>
 

@@ -14,8 +14,93 @@ It creates 3 endpoints:
 
 The plan is to use Cloud Build to listen to a github repository. When the repository is updated, cloud build pulls the changes, creates a new docker container, and redeploys API to cloud run.
 
-## check the API into github
-This test will be checked into the danielruss/R_cloud_run repository.
+## build the dockerfile
+
+Here is the basic dockerfile for running a plumber api on cloud run:
+
+```         
+FROM rocker/tidyverse
+RUN install2.r plumber
+EXPOSE ${PORT}
+ADD . /app
+WORKDIR /app
+CMD R -e "pr\<-plumber::plumb('SimpleTestApi/plumber.R');pr\$run(host='0.0.0.0',port=as.numeric(Sys.getenv('PORT')))"
+```
+
+The FROM command commands set the base container. I use the tidyverse base because installing the tidyverse is really slow. It may be worthwhile to have a plumber base. However, I think in the artifact registry, it saves the base+plumber container anyway.
+
+The rocker/tidyverse base image has code 'install2.r' that handles installing packages. The prefered way to install R packages is to run this code. The RUN command is only run at build time. To install multiple packages:
+
+```         
+RUN install2.r pkg1 pgk2 pkg3
+```
+
+The ADD . /app command copies all the files in the current directory into the /app directory of the image. The next line WORKDIR /app sets the default directory at runtime.
+
+The CMD line is called when the docker image is run. Notice that the "\$" is escaped. This is required.
+
+## build the docker image and push it to artifact registry.
+
+We use the docker build command to build a docker image:
+
+```         
+docker build -t us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/myapi:latest .
+```
+
+The *us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo* is my repo in artifact registry. Google requires the tag to look like: **LOCATION**-docker.pkg.dev/**PROJECT**/**REPOSITORY**/**NAME**
+
+If we wanted to push to the artifact registry, (but you should not because cloud build will do this)
+
+If you want to run the image after you build it:
+
+```         
+docker run --env PORT=8080 -p 8080:8080  -it us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/myapi:latest
+```
+
+of course change the tag from `us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/myapi:latest` to your tag
+
+## deploy the image to cloud run.
+
+using gcloud:
+```
+gcloud run deploy myapitiest --image us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/myapi --region=us-east1 --allow-unauthenticated
+```
+
+Here we are telling cloud run to deploy the "mytestapi" application using the image with a particular tag in the us-east1 region.  I allow unauthenticated call so that I can test the api without credentials.  If you api is not public, not add this, but you will need to pass an authentication token.
+
+## build the cloudbuild.yaml file
+
+Cloud build automatically runs 3 steps in the cloud.
+
+1.  build the docker image...
+2.  push it to the artifact registry
+3.  deploy the artifact to cloud run
+
+The cloudbuild.yaml specifies the steps needed:
+```
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build','-t','us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/apitest','.']
+
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push','us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/apitest']
+
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['run', 'deploy', 'apitest', '--image', 'us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/apitest','--region', 'us-east1', '--platform', 'managed','--allow-unauthenticated']
+```
+
+This is pretty much all you need for the simplest case.  Again make sure you change the tags (and possible the regions if you don't like us-east1)
+
+Each step is was describe before.  The first step is the `docker build`.  The second step is the `docker push`.  And the last step is the `gcloud run deploy`
 
 ## create the cloud build trigger.
 
+ok, I did this in the console, but the command should look like:
+
+> *gcloud builds triggers create cloud-source-repositories #--repo=danielruss/R_cloud_run*
+
+I will have to fix this...
+
+## check the API into github
+
+This test will be checked into the danielruss/R_cloud_run repository.
