@@ -6,5 +6,5 @@ steps:
   args: ['push','us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/apitest']
 
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['run', 'deploy', 'apitest', '--image', 'us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/apitest','--region', 'us-east1', '--service-account','--service-account','cloudrun@nih-nci-dceg-druss.iam.gserviceaccount.com','--platform', 'managed','--allow-unauthenticated']
+  args: ['run', 'deploy', 'apitest', '--image', 'us-east1-docker.pkg.dev/nih-nci-dceg-druss/myrepo/apitest','--region', 'us-east1', '--service-account','cloudrun@nih-nci-dceg-druss.iam.gserviceaccount.com','--platform', 'managed','--allow-unauthenticated']
 
